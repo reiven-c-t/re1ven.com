@@ -1,0 +1,6 @@
+
+.gitignore
+.idea/
+*.sqlite3
+*.db
+*.csv
