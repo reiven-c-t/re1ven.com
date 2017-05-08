@@ -2,12 +2,14 @@ import csv
 import codecs
 from sqlalchemy import create_engine, Table, Column, Integer, Float, String, MetaData, select, update
 import numpy as np
+import requests
+from bs4 import BeautifulSoup as bs
 
 # ファイルなどの変数定義
 # 調べたいドメイン(例: http://re1ven.com) (別の例: https://google.com)
-base_url = "https://example.com"  # 仮アドレスを書いておく
-# screaming flogで取ってきたoutlinkのcsvファイルのパス)
-csv_file_name = "outlink.csv"
+base_url = "http://re1ven.com"  # 仮アドレスを書いておく
+# screaming flogで取ってきたoutlinkのcsvファイルへのパス)
+csv_file_name = "outlink_reiven.csv"
 # 計算を保存するためのsql databaseの指定(defaultでは、sqliteを使用)
 sql_source = "sqlite:///data.sqlite3"
 
@@ -26,12 +28,12 @@ page_link_raw = Table('page_link_data', metadata,
 # table: page_data (pageにinteger primary keyなidを割り振って、idとpageのurlのデータを保存)
 page_data = Table('page_data', metadata,
                   Column('id', Integer(), primary_key=True),
-                  # Column('page_title', String()), # titleはScreaming flogのcsvからは取りにくいのでパス
+                  Column('page_title', String()), # titleはScreaming flogのcsvからは取りにくいのでパス
                   Column('page_url', String(), unique=True),
                   Column('page_rank', Float())  # page rankを格納
                   )
 
-# table: page_link_count (ページの有向グラフ行列のためのデータテーブル)
+# table: page_link_count (ページの有向グラフの推移確率行列のためのデータテーブル)
 page_link_count = Table('page_link_count', metadata,
                         Column('id', Integer(), primary_key=True),
                         Column('from_page_id', Integer()),
@@ -167,4 +169,22 @@ for i in range(len(current)):
     except:
         pass
 
+# requestsを使って、ページタイトルを取得
+s = select([page_data.c.id, page_data.c.page_url])
+all_urls = connection.execute(s)
+for item in all_urls:
+    response = requests.get(item.page_url)
+    if response.status_code == 200:
+        bs_obj = bs(response.content , "html.parser")
+        try:
+            title = bs_obj.find("title").string # titleが存在しない時のエラー回避
+        except:
+            title = ""
+        print(title)
+        u = update(page_data).where(page_data.c.id==item.id)
+        u = u.values(page_title=title)
+        try:
+            result = connection.execute(u)
+        except:
+            pass
 transaction.commit()
