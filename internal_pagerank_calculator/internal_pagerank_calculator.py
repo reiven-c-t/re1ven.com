@@ -5,12 +5,11 @@ import numpy as np
 
 # ファイルなどの変数定義
 # 調べたいドメイン(例: http://re1ven.com) (別の例: https://google.com)
-base_url = "https://example.com" # 仮アドレスを書いておく
+base_url = "https://example.com"  # 仮アドレスを書いておく
 # screaming flogで取ってきたoutlinkのcsvファイルのパス)
 csv_file_name = "outlink.csv"
 # 計算を保存するためのsql databaseの指定(defaultでは、sqliteを使用)
 sql_source = "sqlite:///data.sqlite3"
-
 
 engine = create_engine(sql_source)
 metadata = MetaData(engine)
@@ -29,7 +28,7 @@ page_data = Table('page_data', metadata,
                   Column('id', Integer(), primary_key=True),
                   # Column('page_title', String()), # titleはScreaming flogのcsvからは取りにくいのでパス
                   Column('page_url', String(), unique=True),
-                  Column('page_rank', Float())# page rankを格納
+                  Column('page_rank', Float())  # page rankを格納
                   )
 
 # table: page_link_count (ページの有向グラフ行列のためのデータテーブル)
@@ -151,7 +150,7 @@ d = np.ones((rank, 1), dtype=np.float) / rank
 
 current = np.dot(google_matrix, d)
 current_matrix = google_matrix
-for i in range(2000): #とりあえず2000回ほど回しておく(多分だいたいある程度収束するっぽい)
+for i in range(2000):  # とりあえず2000回ほど回しておく(多分だいたいある程度収束するっぽい)
     current_matrix = np.dot(current_matrix, google_matrix)
     current = np.dot(current_matrix, d)
 
@@ -160,13 +159,8 @@ print(np.sum(current))
 for item in current:
     print(item[0])
 
-
-i = 0
-if len(current) == len(row_list):
-    print('same length')
-
 for i in range(len(current)):
-    u = update(page_data).where(page_data.c.id==row_list[i].id)
+    u = update(page_data).where(page_data.c.id == row_list[i].id)
     u = u.values(page_rank=current[i][0])
     try:
         result = connection.execute(u)
