@@ -1,14 +1,18 @@
 import csv
 import codecs
-from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData, select, update
+from sqlalchemy import create_engine, Table, Column, Integer, Float, String, MetaData, select, update
 import numpy as np
 
+# ファイルなどの変数定義
 # 調べたいドメイン(例: http://re1ven.com) (別の例: https://google.com)
 base_url = "https://example.com" # 仮アドレスを書いておく
 # screaming flogで取ってきたoutlinkのcsvファイルのパス)
 csv_file_name = "outlink.csv"
+# 計算を保存するためのsql databaseの指定(defaultでは、sqliteを使用)
+sql_source = "sqlite:///data.sqlite3"
 
-engine = create_engine('sqlite:///data.sqlite3')
+
+engine = create_engine(sql_source)
 metadata = MetaData(engine)
 
 # table: page_link_raw (csvデータで必要なものを入れておく)
@@ -23,8 +27,9 @@ page_link_raw = Table('page_link_data', metadata,
 # table: page_data (pageにinteger primary keyなidを割り振って、idとpageのurlのデータを保存)
 page_data = Table('page_data', metadata,
                   Column('id', Integer(), primary_key=True),
-                  # Column('page_title', String()), # titleはちょっと取りにくいのでパス
-                  Column('page_url', String(), unique=True)
+                  # Column('page_title', String()), # titleはScreaming flogのcsvからは取りにくいのでパス
+                  Column('page_url', String(), unique=True),
+                  Column('page_rank', Float())# page rankを格納
                   )
 
 # table: page_link_count (ページの有向グラフ行列のためのデータテーブル)
@@ -152,6 +157,20 @@ for i in range(2000): #とりあえず2000回ほど回しておく(多分だい�
 
 # ページランクは各ページへの遷移確率なので、総和は1になる。そのことを確認
 print(np.sum(current))
-print(current)
+for item in current:
+    print(item[0])
+
+
+i = 0
+if len(current) == len(row_list):
+    print('same length')
+
+for i in range(len(current)):
+    u = update(page_data).where(page_data.c.id==row_list[i].id)
+    u = u.values(page_rank=current[i][0])
+    try:
+        result = connection.execute(u)
+    except:
+        pass
 
 transaction.commit()
